@@ -228,16 +228,16 @@ function exportarExcel() {
             r: document.getElementById('responsable').value || "S/R" 
         };
 
-        // 1. Cabecera con valores numéricos directos para evitar errores en resumen
+        // 1. Cabecera (Separamos las etiquetas de los valores para poder formatearlos)
         const data = [
-            ["REPORTE DE INVENTARIO PROFESIONAL"],
+            ["REPORTE DE INVENTARIO"],
             [`Bodega: ${meta.b}`, `Site: ${meta.s}`, `Fecha: ${meta.f}`, `Responsable: ${meta.r}`],
-            [`Total Sistema:`, Number(res.sistema), `Total Físico:`, Number(res.fisico), `% Ajuste:`, `${res.porcentaje}%`],
+            ["Total Sistema:", Number(res.sistema), "Total Físico:", Number(res.fisico), "% Ajuste:", `${res.porcentaje}%`],
             [],
             ["ID Sistema", "Producto", "UN", "Sist.", "Físico", "Dif. Cant", "Vr. Unitario", "Total Físico", "Total Ajuste", "Barcodes"]
         ];
 
-        // 2. Construcción de filas asegurando tipo Number
+        // 2. Datos de productos
         productosBase.forEach(p => {
             const valFisico = localStorage.getItem(`inv-${p.codigo}-${p.lote}`);
             const f = valFisico !== null ? parseFloat(valFisico) : 0;
@@ -245,15 +245,9 @@ function exportarExcel() {
             const bcs = JSON.parse(localStorage.getItem(`barcodes-${p.codigo}`)) || [];
             
             data.push([
-                p.codigo, 
-                p.nombre, 
-                p.un, 
-                Number(p.teorico.toFixed(2)), 
-                Number(f.toFixed(2)), 
-                Number(d.toFixed(2)), 
-                Number(p.precio), 
-                Number((f * p.precio).toFixed(0)), 
-                Number((d * p.precio).toFixed(0)), 
+                p.codigo, p.nombre, p.un, 
+                Number(p.teorico.toFixed(2)), Number(f.toFixed(2)), Number(d.toFixed(2)), 
+                Number(p.precio), Number((f * p.precio).toFixed(0)), Number((d * p.precio).toFixed(0)), 
                 bcs.join(" - ")
             ]);
         });
@@ -261,34 +255,32 @@ function exportarExcel() {
         const ws = XLSX.utils.aoa_to_sheet(data);
         const wb = XLSX.utils.book_new();
 
-        // 3. Formateo de celdas - Usaremos formatos estándar de Excel
-        // #,##0 -> Número con separador de miles
-        // #,##0.00 -> Con 2 decimales
+        // 3. Aplicar Formato a TODAS las celdas numéricas (incluyendo el resumen)
         const range = XLSX.utils.decode_range(ws['!ref']);
-        
         for (let R = range.s.r; R <= range.e.r; ++R) {
             for (let C = range.s.c; C <= range.e.c; ++C) {
-                const cellRef = XLSX.utils.encode_cell({r: R, c: C});
-                const cell = ws[cellRef];
+                const cell = ws[XLSX.utils.encode_cell({r: R, c: C})];
                 if (!cell || cell.t !== 'n') continue;
 
-                // Columnas de Cantidades (Sist, Fís, Dif) -> 2 decimales
-                if (C >= 3 && C <= 5) {
+                // Si es dinero (Columnas G, H, I o los valores del resumen en la fila 3)
+                // En la fila 3 (R=2), los valores están en las columnas B (C=1) y D (C=3)
+                if ((C >= 6 && C <= 8) || (R === 2 && (C === 1 || C === 3))) {
+                    cell.z = '"$"#,##0'; 
+                } 
+                // Si son cantidades (Columnas Sist, Fís, Dif)
+                else if (C >= 3 && C <= 5) {
                     cell.z = '#,##0.00';
-                }
-                // Columnas de Dinero (Precio, Totales) -> Sin decimales, formato contable simple
-                if (C >= 6 && C <= 8) {
-                    cell.z = '#,##0'; 
                 }
             }
         }
 
         ws['!cols'] = [{wch:12}, {wch:40}, {wch:6}, {wch:10}, {wch:10}, {wch:10}, {wch:12}, {wch:15}, {wch:15}, {wch:25}];
+
         XLSX.utils.book_append_sheet(wb, ws, "Inventario");
         XLSX.writeFile(wb, `Inventario_${meta.b}.xlsx`);
     } catch (e) { 
         console.error(e);
-        alert("Error en Excel: " + e.message); 
+        alert("Error al generar Excel"); 
     }
 }
 
