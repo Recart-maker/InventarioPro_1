@@ -114,7 +114,7 @@ function renderizarTarjetas(lista) {
                 <div class="audit-item"><label>Sist.</label><span>${p.teorico}</span></div>
                 <div class="audit-item">
                     <label>Físico</label>
-                    <input type="number" inputmode="decimal" value="${inputVal}" placeholder="0" 
+                    <input type="number" data-key="${key}" inputmode="decimal" value="${inputVal}" placeholder="0" 
                            oninput="actualizarConteo(this, ${p.teorico}, ${p.precio}, '${key}')">
                 </div>
                 <div class="audit-item">
@@ -459,30 +459,26 @@ Quagga.onDetected(function(result) {
         sumarUnoAlConteo(productoActualParaScan);
     }
 });
-
 function sumarUnoAlConteo(idProducto) {
-    // Buscamos todos los productos con ese ID (por si hay varios lotes, sumamos al primero encontrado o al que esté visible)
-    const p = productosBase.find(p => p.codigo === idProducto);
-    
+    const p = productosBase.find(prod => prod.codigo === idProducto);
     if (p) {
         const key = `inv-${p.codigo}-${p.lote}`;
         const actual = parseFloat(localStorage.getItem(key)) || 0;
         const nuevaCantidad = actual + 1;
         
         localStorage.setItem(key, nuevaCantidad);
+
+        // BUSCAMOS EL CUADRO "FÍSICO" POR SU ETIQUETA data-key
+        const inputFisico = document.querySelector(`input[data-key="${key}"]`);
         
-        // Actualizamos visualmente sin cerrar la cámara
-        console.log(`Sumado +1 a ${p.nombre}. Total: ${nuevaCantidad}`);
+        if (inputFisico) {
+            inputFisico.value = nuevaCantidad; // Aquí es donde cambia el número en pantalla
+            actualizarConteo(inputFisico, p.teorico, p.precio, key); // Esto actualiza colores y totales
+        }
         
-        // Opcional: Mostrar un aviso visual temporal en pantalla
         mostrarAvisoRapido(`+1 (Total: ${nuevaCantidad})`);
-        
-        // Refrescamos los totales del fondo
-        actualizarTotalesGenerales();
-        actualizarBarraProgreso();
     }
 }
-
 function mostrarAvisoRapido(msj) {
     const aviso = document.createElement("div");
     aviso.style = "position:fixed; top:20%; left:50%; transform:translate(-50%, -50%); background:rgba(39, 174, 96, 0.9); color:white; padding:15px 30px; border-radius:50px; z-index:10000; font-weight:bold; font-size:1.5em;";
