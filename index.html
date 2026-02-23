@@ -9,6 +9,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
     <link rel="manifest" href="manifest.json">
+    <script src="https://cdn.jsdelivr.net/npm/@ericblade/quagga2/dist/quagga.min.js"></script>
 </head>
 <body>
     <header>
@@ -37,8 +38,13 @@
     <button id="dark-mode-btn" onclick="toggleDarkMode()" style="background: #444; color: white; border: 1px solid #666; padding: 5px 15px; border-radius: 20px; font-size: 0.8em; cursor: pointer;">
         🌙 Dark
     </button>
-</div>
-    </header>
+        </div>
+            </header>
+
+            <div id="camera-scanner" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:black; z-index:9999;">
+            <div id="interactive" class="viewport" style="width:100%; height:80%;"></div>
+            <button onclick="cerrarEscaner()" style="width:100%; height:20%; background:red; color:white; font-size:2em;">CERRAR</button>
+        </div>
 
     <main id="app">
         <div class="search-container">

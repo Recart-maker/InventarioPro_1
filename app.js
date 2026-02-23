@@ -407,3 +407,91 @@ function capturarNuevoBarcode(codigoProducto) {
 function abrirEscaner(codigoProducto) {
     alert("Función de cámara en desarrollo. Por ahora, use el botón + BarCode para ingresar manualmente.");
 }
+
+// Detectar tecla Enter en los inputs de cantidad
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') {
+        const inputs = Array.from(document.querySelectorAll('input[type="number"]'));
+        const index = inputs.indexOf(document.activeElement);
+        if (index > -1 && index < inputs.length - 1) {
+            inputs[index + 1].focus(); // Salta al siguiente input
+            inputs[index + 1].select(); // Selecciona el texto para borrarlo rápido
+        }
+    }
+});
+
+let productoActualParaScan = null;
+
+function abrirEscaner(codigoProducto) {
+    productoActualParaScan = codigoProducto;
+    document.getElementById('camera-scanner').style.display = 'block';
+    
+    Quagga.init({
+        inputStream: { name: "Live", type: "LiveStream", target: document.querySelector('#interactive') },
+        decoder: { readers: ["ean_reader", "code_128_reader", "upc_reader"] }
+    }, function(err) {
+        if (err) { alert("Error al abrir cámara"); return; }
+        Quagga.start();
+    });
+}
+
+// Variable para evitar que el escáner registre 10 veces el mismo código en un segundo
+let lastScannedCode = "";
+let lastScannedTime = 0;
+
+Quagga.onDetected(function(result) {
+    const codigoLeido = result.codeResult.code;
+    const ahora = Date.now();
+
+    // Evitar lecturas duplicadas accidentales (espera 1.5 segundos entre lecturas del mismo código)
+    if (codigoLeido === lastScannedCode && (ahora - lastScannedTime) < 1500) return;
+
+    const barcodesRegistrados = JSON.parse(localStorage.getItem(`barcodes-${productoActualParaScan}`)) || [];
+    
+    if (barcodesRegistrados.includes(codigoLeido)) {
+        lastScannedCode = codigoLeido;
+        lastScannedTime = ahora;
+
+        // Vibración corta para confirmar (solo funciona en Android/Chrome)
+        if (navigator.vibrate) navigator.vibrate(100);
+
+        // SUMA AUTOMÁTICA +1
+        sumarUnoAlConteo(productoActualParaScan);
+    }
+});
+
+function sumarUnoAlConteo(idProducto) {
+    // Buscamos todos los productos con ese ID (por si hay varios lotes, sumamos al primero encontrado o al que esté visible)
+    const p = productosBase.find(p => p.codigo === idProducto);
+    
+    if (p) {
+        const key = `inv-${p.codigo}-${p.lote}`;
+        const actual = parseFloat(localStorage.getItem(key)) || 0;
+        const nuevaCantidad = actual + 1;
+        
+        localStorage.setItem(key, nuevaCantidad);
+        
+        // Actualizamos visualmente sin cerrar la cámara
+        console.log(`Sumado +1 a ${p.nombre}. Total: ${nuevaCantidad}`);
+        
+        // Opcional: Mostrar un aviso visual temporal en pantalla
+        mostrarAvisoRapido(`+1 (Total: ${nuevaCantidad})`);
+        
+        // Refrescamos los totales del fondo
+        actualizarTotalesGenerales();
+        actualizarBarraProgreso();
+    }
+}
+
+function mostrarAvisoRapido(msj) {
+    const aviso = document.createElement("div");
+    aviso.style = "position:fixed; top:20%; left:50%; transform:translate(-50%, -50%); background:rgba(39, 174, 96, 0.9); color:white; padding:15px 30px; border-radius:50px; z-index:10000; font-weight:bold; font-size:1.5em;";
+    aviso.innerText = msj;
+    document.body.appendChild(aviso);
+    setTimeout(() => aviso.remove(), 1000);
+}
+
+function cerrarEscaner() {
+    Quagga.stop();
+    document.getElementById('camera-scanner').style.display = 'none';
+}
