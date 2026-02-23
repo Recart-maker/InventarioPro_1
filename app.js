@@ -152,11 +152,27 @@ function sumarUnoAlConteo(id) {
     const p = productosBase.find(prod => prod.codigo === id);
     if (p) {
         const key = `inv-${p.codigo}-${p.lote}`;
-        const nVal = (parseFloat(localStorage.getItem(key)) || 0) + 1;
-        localStorage.setItem(key, nVal);
+        
+        // 1. Obtenemos el valor actual o 0
+        const valorActual = parseFloat(localStorage.getItem(key)) || 0;
+        
+        // 2. Sumamos el incremento (en tu caso 0.9 o 1 según el producto)
+        // Usamos un incremento dinámico basado en el producto si es necesario, 
+        // pero aquí forzamos la limpieza de decimales:
+        let nuevoVal = valorActual + 0.9; 
+        
+        // 3. LIMPIEZA: Redondeamos a 2 decimales para eliminar el ...0000001
+        nuevoVal = Math.round(nuevoVal * 100) / 100;
+
+        // 4. Guardamos y actualizamos
+        localStorage.setItem(key, nuevoVal);
+        
         const input = document.querySelector(`input[data-key="${key}"]`);
-        if (input) { input.value = nVal; actualizarConteo(input, p.teorico, p.precio, key); }
-        mostrarAvisoRapido(`+1 (Total: ${nVal})`);
+        if (input) {
+            input.value = nuevoVal; 
+            actualizarConteo(input, p.teorico, p.precio, key);
+        }
+        mostrarAvisoRapido(`+0.9 (Total: ${nuevoVal})`);
     }
 }
 
@@ -176,7 +192,12 @@ function confirmarSumaModal() {
     if (cant > 0) {
         const p = productoEncontradoModal;
         const key = `inv-${p.codigo}-${p.lote}`;
-        const nueva = (parseFloat(localStorage.getItem(key)) || 0) + cant;
+        const actual = parseFloat(localStorage.getItem(key)) || 0;
+        
+        // Aplicamos la misma lógica de redondeo
+        let nueva = actual + cant;
+        nueva = Math.round(nueva * 100) / 100; 
+
         localStorage.setItem(key, nueva);
         const input = document.querySelector(`input[data-key="${key}"]`);
         if (input) { input.value = nueva; actualizarConteo(input, p.teorico, p.precio, key); }
