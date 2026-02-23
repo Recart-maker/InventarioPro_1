@@ -140,3 +140,47 @@ body.dark-mode .header-card {
 }
 .btn-scan { background: #34495e; color: white; }
 .btn-add-bc { background: #7f8c8d; color: white; }
+
+.btn-control {
+    background: #444;
+    color: white;
+    border: 1px solid #666;
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 0.85em;
+    cursor: pointer;
+    font-family: monospace; /* Para que el icono de barras se vea mejor */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 60px;
+    height: 30px;
+}
+
+/* Ajuste para el modo oscuro */
+body.dark-mode .btn-control {
+    background: #2c3e50;
+    border-color: #34495e;
+}
+
+.btn-control {
+    background: #444;
+    color: white;
+    border: 1px solid #666;
+    padding: 5px 15px;
+    border-radius: 20px;
+    font-size: 0.8em;
+    cursor: pointer;
+    min-width: 70px;
+    height: 30px;
+}
+
+body.dark-mode #modal-suma > div {
+    background: #2c2c2c !important;
+    color: white;
+}
+body.dark-mode #modal-input-suma {
+    background: #333;
+    color: white;
+    border-color: var(--blue);
+}
