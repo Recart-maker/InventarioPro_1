@@ -195,65 +195,65 @@ function exportarExcel() {
             style: 'currency', currency: 'CLP', maximumFractionDigits: 0 
         }).format(n);
 
+        // Cabecera del archivo
         const data = [
-            ["REPORTE DE INVENTARIO PROFESIONAL"],
+            ["REPORTE DE INVENTARIO PROFESIONAL - UPC SAN FRANCISCO"],
             [`Bodega: ${meta.b}`, `Site: ${meta.s}`, `Fecha: ${meta.f}`, `Responsable: ${meta.r}`],
             [`Total Sistema:`, fM_Cabecera(res.sistema), `Total Físico:`, fM_Cabecera(res.fisico), `% Ajuste:`, parseFloat(res.porcentaje) / 100],
             [],
-            ["Código", "Producto", "UN", "Sist.", "Físico", "Dif. Cant", "Vr. Unitario", "Vr. Diferencia", "Total Físico"]
+            ["ID Sistema", "Producto", "Lote", "UN", "Sist.", "Físico", "Dif. Cant", "Vr. Unitario", "Total Físico", "Barcodes Vinculados"]
         ];
 
+        // Cuerpo de la tabla
         productosBase.forEach(p => {
-            const f = parseFloat(localStorage.getItem(`inv-${p.codigo}-${p.lote}`)) || 0;
+            const key = `inv-${p.codigo}-${p.lote}`;
+            const f = parseFloat(localStorage.getItem(key)) || 0;
             const d = f - p.teorico;
-            data.push([p.codigo, p.nombre, p.un, p.teorico, f, d, p.precio, (d * p.precio), (f * p.precio)]);
-        });
+            
+            // BUSCAMOS LOS BARCODES CAPTURADOS
+            const bcs = JSON.parse(localStorage.getItem(`barcodes-${p.codigo}`)) || [];
+            const listaBarcodes = bcs.join(" - ");
 
-        // Dentro de productosBase.forEach en exportarExcel:
-        const barcodes = JSON.parse(localStorage.getItem(`barcodes-${p.codigo}`)) || [];
-        data.push([
-            p.codigo, p.nombre, p.un, p.teorico, f, d, p.precio, (d * p.precio), (f * p.precio), 
-            barcodes.join(" | ") // Nueva columna J con todos los códigos separados por barras
-        ]);
+            data.push([
+                p.codigo, 
+                p.nombre, 
+                p.lote, 
+                p.un, 
+                p.teorico, 
+                f, 
+                d, 
+                p.precio, 
+                (f * p.precio), 
+                listaBarcodes
+            ]);
+        });
 
         const ws = XLSX.utils.aoa_to_sheet(data);
         const wb = XLSX.utils.book_new();
 
-        // --- FORMATOS CON COLORES DINÁMICOS ---
-        // Formato: [Color Positivo];[Color Negativo];[Color Cero]
-        const fmtMonedaColor = '[Color10]"$"#,##0.00;[Red]"-" "$"#,##0.00;[Black]"$"0.00'; 
-        const fmtCantColor = '[Color10]0.00;[Red]-0.00;[Black]0.00';
-        const fmtPorcentaje = '[Color10]0.00%;[Red]-0.00%;[Black]0.00%';
-
+        // Formatos de moneda y colores (opcional, para Excel moderno)
+        const fmtMoneda = '"$"#,##0';
         const range = XLSX.utils.decode_range(ws['!ref']);
-        
-        // 1. Color al % de Ajuste en cabecera
-        const cellPorc = ws[XLSX.utils.encode_cell({r: 2, c: 5})];
-        if (cellPorc) cellPorc.z = fmtPorcentaje;
-
-        // 2. Colores en la tabla
         for (let R = 4; R <= range.e.r; ++R) {
-            // Columna Dif Cant (F - índice 5)
-            const cDif = ws[XLSX.utils.encode_cell({r: R, c: 5})];
-            if (cDif) cDif.z = fmtCantColor;
-
-            // Columna Vr. Unitario (G - índice 6) -> Solo moneda normal
-            const cUnit = ws[XLSX.utils.encode_cell({r: R, c: 6})];
-            if (cUnit) cUnit.z = '"$"#,##0.00';
-
-            // Columnas Vr. Diferencia (H) y Total Físico (I) -> Con colores
-            for (let C = 7; C <= 8; ++C) {
+            [7, 8].forEach(C => { // Columnas H e I
                 const cell = ws[XLSX.utils.encode_cell({r: R, c: C})];
-                if (cell && cell.t === 'n') cell.z = fmtMonedaColor;
-            }
+                if (cell) cell.z = fmtMoneda;
+            });
         }
 
-        ws['!cols'] = [{wch: 12}, {wch: 35}, {wch: 6}, {wch: 10}, {wch: 10}, {wch: 10}, {wch: 15}, {wch: 15}, {wch: 15}];
+        // Ajuste de anchos de columna
+        ws['!cols'] = [
+            {wch: 12}, {wch: 40}, {wch: 10}, {wch: 6}, 
+            {wch: 10}, {wch: 10}, {wch: 10}, {wch: 12}, 
+            {wch: 15}, {wch: 30}
+        ];
+
         XLSX.utils.book_append_sheet(wb, ws, "Inventario");
-        XLSX.writeFile(wb, `Reporte_Excel_${meta.b}.xlsx`);
+        XLSX.writeFile(wb, `Reporte_Inventario_${meta.b}_${meta.f}.xlsx`);
+
     } catch (e) { 
-        console.error(e);
-        alert("Error al generar Excel."); 
+        console.error("Error detallado:", e);
+        alert("Error al generar Excel. Revisa la consola (F12) para más detalles."); 
     }
 }
 
